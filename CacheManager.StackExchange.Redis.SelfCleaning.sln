@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CacheManager.StackExchange.Redis.SelfCleaning", "CacheManager.StackExchange.Redis.SelfCleaning\CacheManager.StackExchange.Redis.SelfCleaning.csproj", "{3EDD55B6-BCF3-4C92-A94E-B04F671E2FE2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CacheManager.StackExchange.Redis.SelfCleaning.Examples", "CacheManager.StackExchange.Redis.SelfCleaning.Examples\CacheManager.StackExchange.Redis.SelfCleaning.Examples.csproj", "{F2A6D41A-872B-4691-A177-B79CB8AF0A7F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{3EDD55B6-BCF3-4C92-A94E-B04F671E2FE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3EDD55B6-BCF3-4C92-A94E-B04F671E2FE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3EDD55B6-BCF3-4C92-A94E-B04F671E2FE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2A6D41A-872B-4691-A177-B79CB8AF0A7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2A6D41A-872B-4691-A177-B79CB8AF0A7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2A6D41A-872B-4691-A177-B79CB8AF0A7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2A6D41A-872B-4691-A177-B79CB8AF0A7F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
