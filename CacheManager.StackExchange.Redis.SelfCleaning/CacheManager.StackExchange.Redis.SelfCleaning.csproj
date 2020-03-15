@@ -4,4 +4,10 @@
         <TargetFramework>netstandard2.0</TargetFramework>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="CacheManager.Core" Version="1.2.0" />
+      <PackageReference Include="CacheManager.StackExchange.Redis" Version="1.2.0" />
+      <PackageReference Include="StackExchange.Redis" Version="2.0.513" />
+    </ItemGroup>
+
 </Project>
