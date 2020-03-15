@@ -17,9 +17,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
             TimeSpan cleanupInterval = TimeSpan.FromMilliseconds(cleanupIntervalMilliseconds);
             TimeSpan slidingExpiration = TimeSpan.FromSeconds(slidingExpirationSeconds);
 
-            // Build the cache with a self-cleaning redis handle (as well as a JSON serializer)
+            // Build the cache with a self-cleaning redis handle (as well as a ProtoBuf serializer)
             ICacheManager<string> cacheManager = CacheFactory.Build<string>(part => part
-                .WithJsonSerializer()
+                .WithProtoBufSerializer()
                 .WithSelfCleaningRedisConfiguration(connectionString, cleanupInterval, slidingExpiration,
                     out string configurationKey)
                 .WithSelfCleaningRedisCacheHandle(configurationKey));
