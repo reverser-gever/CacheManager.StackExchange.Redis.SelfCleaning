@@ -16,7 +16,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         private readonly IDatabase _redisDatabase;
         private readonly ITimer _cleanupTimer;
         private readonly TimeSpan _slidingExpiration;
-        private readonly int _databaseId;
         
         public SelfCleaningRedisCacheHandle(ICacheManagerConfiguration managerConfiguration,
             CacheHandleConfiguration configuration, ILoggerFactory loggerFactory, ICacheSerializer serializer) : base(
@@ -33,7 +32,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
             _redisDatabase = selfCleaningRedisConfiguration.RedisDatabase;
             _cleanupTimer = selfCleaningRedisConfiguration.CleanupTimer;
             _slidingExpiration = selfCleaningRedisConfiguration.SlidingExpiration;
-            _databaseId = selfCleaningRedisConfiguration.Database;
         }
 
         public void Start()
@@ -53,7 +51,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         private void RunCleanup()
         {
             IEnumerable<RedisKey> keysToRemove = Servers
-                .SelectMany(server => server.Keys(_databaseId))
+                .SelectMany(server => server.Keys(_redisDatabase.Database))
                 .Where(key => (_redisDatabase.KeyIdleTime(key) ?? default) >= _slidingExpiration);
 
             foreach (RedisKey key in keysToRemove)
