@@ -34,25 +34,25 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
 
         public static ConfigurationBuilderCachePart WithSelfCleaningRedisConfiguration(
             this ConfigurationBuilderCachePart part, IConnectionMultiplexer redisClient, ITimer cleanupTimer,
-            TimeSpan slidingExpiration, out string configurationKey, int database = 0,
+            TimeSpan slidingExpiration, out string configurationKey, int databaseId = 0,
             bool enableKeyspaceNotifications = false)
         {
             return part
-                .WithRedisConfiguration(DEFAULT_CONFIGURATION_KEY, redisClient, database, enableKeyspaceNotifications)
-                .WithSelfCleaningRedisConfiguration(DEFAULT_CONFIGURATION_KEY, redisClient.GetDatabase(database),
+                .WithRedisConfiguration(DEFAULT_CONFIGURATION_KEY, redisClient, databaseId, enableKeyspaceNotifications)
+                .WithSelfCleaningRedisConfiguration(DEFAULT_CONFIGURATION_KEY, redisClient.GetDatabase(databaseId),
                     cleanupTimer, slidingExpiration, out configurationKey);
         }
 
         public static ConfigurationBuilderCachePart WithSelfCleaningRedisConfiguration(
             this ConfigurationBuilderCachePart part, string connectionString, TimeSpan cleanupInterval,
-            TimeSpan slidingExpiration, out string configurationKey, int database = 0,
+            TimeSpan slidingExpiration, out string configurationKey, int databaseId = 0,
             bool enableKeyspaceNotifications = false)
         {
             IConnectionMultiplexer redisClient = ConnectionMultiplexer.Connect(connectionString);
             ITimer cleanupTimer = new DefaultTimer(cleanupInterval.TotalMilliseconds);
 
             return part.WithSelfCleaningRedisConfiguration(redisClient, cleanupTimer, slidingExpiration,
-                out configurationKey, database, enableKeyspaceNotifications);
+                out configurationKey, databaseId, enableKeyspaceNotifications);
         }
 
         public static ConfigurationBuilderCacheHandlePart WithSelfCleaningRedisCacheHandle(
