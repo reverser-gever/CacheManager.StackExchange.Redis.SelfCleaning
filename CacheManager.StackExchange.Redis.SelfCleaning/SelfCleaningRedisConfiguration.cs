@@ -11,13 +11,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
 
         public ITimer CleanupTimer { get; }
         
-        public TimeSpan SlidingExpiration { get; }
+        public TimeSpan TimeToLive { get; }
 
-        public SelfCleaningRedisConfiguration(IDatabase redisDatabase, ITimer cleanupTimer, TimeSpan slidingExpiration)
+        public SelfCleaningRedisConfiguration(IDatabase redisDatabase, ITimer cleanupTimer, TimeSpan timeToLive)
         {
             RedisDatabase = redisDatabase;
             CleanupTimer = cleanupTimer;
-            SlidingExpiration = slidingExpiration;
+            TimeToLive = timeToLive;
         }
     }
 }

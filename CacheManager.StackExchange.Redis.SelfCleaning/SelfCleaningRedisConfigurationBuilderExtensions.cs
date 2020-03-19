@@ -13,13 +13,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         
         public static ConfigurationBuilderCachePart WithSelfCleaningRedisConfiguration(
             this ConfigurationBuilderCachePart part, string configurationKey, IDatabase redisDatabase,
-            ITimer cleanupTimer, TimeSpan slidingExpiration, out string newConfigurationKey)
+            ITimer cleanupTimer, TimeSpan timeToLive, out string newConfigurationKey)
         {
             RedisConfiguration configuration = RedisConfigurations.GetConfiguration(configurationKey);
 
             newConfigurationKey = configurationKey + CONFIGURATION_KEY_SUFFIX;
 
-            var newConfiguration = new SelfCleaningRedisConfiguration(redisDatabase, cleanupTimer, slidingExpiration)
+            var newConfiguration = new SelfCleaningRedisConfiguration(redisDatabase, cleanupTimer, timeToLive)
             {
                 Key = newConfigurationKey,
                 ConnectionString = configuration.ConnectionString,
@@ -34,24 +34,24 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
 
         public static ConfigurationBuilderCachePart WithSelfCleaningRedisConfiguration(
             this ConfigurationBuilderCachePart part, IConnectionMultiplexer redisClient, ITimer cleanupTimer,
-            TimeSpan slidingExpiration, out string configurationKey, int databaseId = 0,
+            TimeSpan timeToLive, out string configurationKey, int databaseId = 0,
             bool enableKeyspaceNotifications = false)
         {
             return part
                 .WithRedisConfiguration(DEFAULT_CONFIGURATION_KEY, redisClient, databaseId, enableKeyspaceNotifications)
                 .WithSelfCleaningRedisConfiguration(DEFAULT_CONFIGURATION_KEY, redisClient.GetDatabase(databaseId),
-                    cleanupTimer, slidingExpiration, out configurationKey);
+                    cleanupTimer, timeToLive, out configurationKey);
         }
 
         public static ConfigurationBuilderCachePart WithSelfCleaningRedisConfiguration(
             this ConfigurationBuilderCachePart part, string connectionString, TimeSpan cleanupInterval,
-            TimeSpan slidingExpiration, out string configurationKey, int databaseId = 0,
+            TimeSpan timeToLive, out string configurationKey, int databaseId = 0,
             bool enableKeyspaceNotifications = false)
         {
             IConnectionMultiplexer redisClient = ConnectionMultiplexer.Connect(connectionString);
             ITimer cleanupTimer = new DefaultTimer(cleanupInterval.TotalMilliseconds);
 
-            return part.WithSelfCleaningRedisConfiguration(redisClient, cleanupTimer, slidingExpiration,
+            return part.WithSelfCleaningRedisConfiguration(redisClient, cleanupTimer, timeToLive,
                 out configurationKey, databaseId, enableKeyspaceNotifications);
         }
 

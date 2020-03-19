@@ -15,7 +15,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
     {
         private readonly IDatabase _redisDatabase;
         private readonly ITimer _cleanupTimer;
-        private readonly TimeSpan _slidingExpiration;
+        private readonly TimeSpan _timeToLive;
         
         public SelfCleaningRedisCacheHandle(ICacheManagerConfiguration managerConfiguration,
             CacheHandleConfiguration configuration, ILoggerFactory loggerFactory, ICacheSerializer serializer) : base(
@@ -33,7 +33,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
 
             _redisDatabase = selfCleaningRedisConfiguration.RedisDatabase;
             _cleanupTimer = selfCleaningRedisConfiguration.CleanupTimer;
-            _slidingExpiration = selfCleaningRedisConfiguration.SlidingExpiration;
+            _timeToLive = selfCleaningRedisConfiguration.TimeToLive;
         }
 
         public void Start()
@@ -53,8 +53,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         private void RunCleanup()
         {
             IEnumerable<RedisKey> keysToRemove = Servers
+                // We cannot get a list of all keys directly from the database, so we get them from each server instead
                 .SelectMany(server => server.Keys(_redisDatabase.Database))
-                .Where(key => (_redisDatabase.KeyIdleTime(key) ?? default) >= _slidingExpiration);
+                // After we collect all keys, we filter them and keep only those which exceeded the TTL   
+                .Where(key => (_redisDatabase.KeyIdleTime(key) ?? TimeSpan.Zero) >= _timeToLive);
 
             foreach (RedisKey key in keysToRemove)
             {
