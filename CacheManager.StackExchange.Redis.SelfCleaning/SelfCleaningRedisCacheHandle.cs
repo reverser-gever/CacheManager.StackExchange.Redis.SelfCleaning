@@ -25,7 +25,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
 
             if (!(redisConfiguration is SelfCleaningRedisConfiguration selfCleaningRedisConfiguration))
             {
-                throw new ArgumentException("The given configuration is not of type SelfCleaningRedisConfiguration",
+                throw new ArgumentException(
+                    $"The given configuration is not of type {typeof(SelfCleaningRedisConfiguration).Name}. " +
+                    $"Actual type: {redisConfiguration.GetType().Name}", 
                     nameof(configuration));
             }
 
