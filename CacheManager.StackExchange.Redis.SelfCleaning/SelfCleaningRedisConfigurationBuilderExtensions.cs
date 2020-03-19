@@ -12,6 +12,8 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
     /// </summary>
     public static class SelfCleaningRedisConfigurationBuilderExtensions
     {
+        // CacheManager saves its RedisConfigurations in a dictionary-like way. These keys exist to identify and
+        // separate between the basic RedisConfiguration and our SelfCleaningRedisConfiguration
         private const string REDIS_CONFIGURATION_KEY = "redis";
         private const string SELF_CLEANING_REDIS_CONFIGURATION_KEY = "redis-self_cleaning";
 
@@ -62,6 +64,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         public static ConfigurationBuilderCacheHandlePart WithSelfCleaningRedisCacheHandle(
             this ConfigurationBuilderCachePart part, string configurationKey)
         {
+            // This method tells the CacheFactory to create an instance of SelfCleaningRedisCacheHandle when it builds
+            // the cache (CacheManager does this using reflection). This instance will use the configuration added by
+            // the WithSelfCleaningRedisConfiguration method
             return part.WithHandle(typeof(SelfCleaningRedisCacheHandle<>), configurationKey);
         }
     }
