@@ -11,6 +11,10 @@ using StackExchange.Redis;
 
 namespace CacheManager.StackExchange.Redis.SelfCleaning
 {
+    /// <summary>
+    /// The timeout mechanism in Redis works in a non-realtime way. This implementation provides a workaround for that
+    /// mechanism. When using this handle, there's no need to add an expiration for the items you insert.
+    /// </summary>
     public class SelfCleaningRedisCacheHandle<TCacheValue> : RedisCacheHandle<TCacheValue>, IStartable
     {
         private readonly IDatabase _redisDatabase;
