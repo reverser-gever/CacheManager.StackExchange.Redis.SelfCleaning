@@ -7,8 +7,8 @@ using StackExchange.Redis;
 namespace CacheManager.StackExchange.Redis.SelfCleaning
 {
     /// <summary>
-    /// To properly use these methods, first call <see cref="WithSelfCleaningRedisConfiguration"/>,
-    /// then call <see cref="WithSelfCleaningRedisCacheHandle"/>
+    /// To properly use these methods, first call <see cref="WithDefaultSelfCleaningRedisConfiguration"/> or
+    /// <see cref="WithSelfCleaningRedisConfiguration"/>,  then call <see cref="WithSelfCleaningRedisCacheHandle"/>.
     /// </summary>
     public static class SelfCleaningRedisConfigurationBuilderExtensions
     {
@@ -17,7 +17,12 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         private const string REDIS_CONFIGURATION_KEY = "redis";
         private const string SELF_CLEANING_REDIS_CONFIGURATION_KEY = "redis-self_cleaning";
 
-        public static ConfigurationBuilderCachePart WithSelfCleaningRedisConfiguration(
+        /// <summary>
+        /// Creates an <see cref="IConnectionMultiplexer"/> and adds a self-cleaning Redis configuration, using the
+        /// default <see cref="ITimer"/> implementation. If you wish to inject these interfaces yourself, use
+        /// <see cref="WithSelfCleaningRedisConfiguration"/> instead.
+        /// </summary>
+        public static ConfigurationBuilderCachePart WithDefaultSelfCleaningRedisConfiguration(
             this ConfigurationBuilderCachePart part, string connectionString, TimeSpan cleanupInterval,
             TimeSpan timeToLive, out string configurationKey, int databaseId = 0,
             bool enableKeyspaceNotifications = false)
@@ -29,6 +34,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
                 out configurationKey, databaseId, enableKeyspaceNotifications);
         }
 
+        /// <summary>
+        /// Adds a self-cleaning Redis configuration using the given <see cref="IConnectionMultiplexer"/> and
+        /// <see cref="ITimer"/>. 
+        /// </summary>
         public static ConfigurationBuilderCachePart WithSelfCleaningRedisConfiguration(
             this ConfigurationBuilderCachePart part, IConnectionMultiplexer redisClient, ITimer cleanupTimer,
             TimeSpan timeToLive, out string configurationKey, int databaseId = 0,
