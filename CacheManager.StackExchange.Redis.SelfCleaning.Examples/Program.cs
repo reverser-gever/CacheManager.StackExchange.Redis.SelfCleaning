@@ -20,7 +20,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
             // Build the cache with a self-cleaning redis handle (as well as a ProtoBuf serializer)
             ICacheManager<string> cacheManager = CacheFactory.Build<string>(part => part
                 .WithProtoBufSerializer()
-                .WithSelfCleaningRedisConfiguration(connectionString, cleanupInterval, slidingExpiration,
+                .WithDefaultSelfCleaningRedisConfiguration(connectionString, cleanupInterval, slidingExpiration,
                     out string configurationKey)
                 .WithSelfCleaningRedisCacheHandle(configurationKey));
 
