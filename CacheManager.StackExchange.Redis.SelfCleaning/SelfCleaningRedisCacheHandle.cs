@@ -20,20 +20,14 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         private readonly IDatabase _redisDatabase;
         private readonly ITimer _cleanupTimer;
         private readonly TimeSpan _timeToLive;
-        
-        public SelfCleaningRedisCacheHandle(ICacheManagerConfiguration managerConfiguration,
-            CacheHandleConfiguration configuration, ILoggerFactory loggerFactory, ICacheSerializer serializer) : base(
-            managerConfiguration, configuration, loggerFactory, serializer)
-        {
-            RedisConfiguration redisConfiguration = RedisConfigurations.GetConfiguration(configuration.Key);
 
-            if (!(redisConfiguration is SelfCleaningRedisConfiguration selfCleaningRedisConfiguration))
-            {
-                throw new ArgumentException(
-                    $"The given configuration is not of type {typeof(SelfCleaningRedisConfiguration).Name}. " +
-                    $"Actual type: {redisConfiguration.GetType().Name}", 
-                    nameof(configuration));
-            }
+        public SelfCleaningRedisCacheHandle(ICacheManagerConfiguration managerConfiguration,
+            ISelfCleaningRedisConfigurationProvider selfCleaningRedisConfigurationProvider,
+            CacheHandleConfiguration configuration, ILoggerFactory loggerFactory, ICacheSerializer serializer)
+            : base(managerConfiguration, configuration, loggerFactory, serializer)
+        {
+            var selfCleaningRedisConfiguration = 
+                selfCleaningRedisConfigurationProvider.GetConfiguration(configuration);
 
             _redisDatabase = selfCleaningRedisConfiguration.RedisDatabase;
             _cleanupTimer = selfCleaningRedisConfiguration.CleanupTimer;
@@ -50,7 +44,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
         {
             _cleanupTimer.Elapsed -= RunCleanup;
             _cleanupTimer.Dispose();
-            
+
             base.Dispose(disposeManaged);
         }
 
