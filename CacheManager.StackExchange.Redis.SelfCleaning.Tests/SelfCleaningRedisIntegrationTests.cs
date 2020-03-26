@@ -28,7 +28,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
         private TimeSpan _timeToLive;
         private ICacheManager<DummyModel> _cache;
 
-        private ICollection<(CacheItemRemovedEventArgs, DateTime)> _onRemoveByHandleInvocations;
+        private ICollection<(CacheItemRemovedEventArgs Args, DateTime Time)> _onRemoveByHandleInvocations;
 
         [OneTimeSetUp]
         public void Setup()
@@ -67,7 +67,18 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
             void Put(byte[] hash, RedisKey[] keys, RedisValue[] values, CommandFlags flags)
             {
                 RedisValue[] newValues = {values[0], values[2], values[3], values[4], values[1], values[5], true};
-                _fauxDatabase.Add(keys[0], (newValues, DateTime.Now));
+                (RedisValue[], DateTime) tuple = (newValues, DateTime.Now);
+
+                RedisKey key = keys[0];
+
+                if (_fauxDatabase.ContainsKey(key))
+                {
+                    _fauxDatabase[key] = tuple;
+                }
+                else
+                {
+                    _fauxDatabase.Add(key, tuple);
+                }
             }
 
             // Put
@@ -114,34 +125,58 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
 
         #endregion
 
-        [OneTimeTearDown]
+        [TearDown]
         public void TearDown()
+        {
+            _onRemoveByHandleInvocations.Clear();
+        }
+        
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
         {
             _cache.Dispose();
         }
 
-        [Test]
-        public void Put_AddOneKey_OnRemoveByHandleCalledAfterTimeToLive()
+        [TestCase(1)]
+        [TestCase(3)]
+        [TestCase(5)]
+        public void Put_AddSomeAmountOfKeys_OnRemoveByHandleCalledAfterTimeToLiveWithCorrectValueAndReason(int amountOfKeys)
         {
             // Arrange
-            var key = "key";
-            var value = new DummyModel {Property = "property"};
-
+            IEnumerable<(string, DummyModel)> keys = Enumerable.Repeat("key", amountOfKeys)
+                .Select((key, i) => (key + i, new DummyModel {Property = "property" + i}));
+            
             // Act
-            _cache[key] = value;
-            DateTime insertionTime = DateTime.Now;
+            var keysWithInsertionTimes = new List<(string, DummyModel, DateTime)>();
+            
+            foreach ((string key, DummyModel value) in keys)
+            {
+                _cache[key] = value;
+                DateTime insertionTime = DateTime.Now;
+                keysWithInsertionTimes.Add((key, value, insertionTime));
+            }
+            
             Task.Delay((int) (_timeToLive.TotalMilliseconds + TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD)).Wait();
             
             // Assert
-            (CacheItemRemovedEventArgs args, DateTime removeTime) = _onRemoveByHandleInvocations.Single();
-            
-            Assert.AreEqual(key, args.Key);
-            Assert.AreEqual(CacheItemRemovedReason.Expired, args.Reason);
-            Assert.AreEqual(value, args.Value);
 
-            double timeAlive = (removeTime - insertionTime).TotalMilliseconds;
-            double differenceBetweenTimeAliveAndTimeToLive = Math.Abs(timeAlive - _timeToLive.TotalMilliseconds);
-            Assert.LessOrEqual(differenceBetweenTimeAliveAndTimeToLive, TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD);
+            IDictionary<string, (CacheItemRemovedEventArgs Args, DateTime Time)> invocationsDictionary =
+                _onRemoveByHandleInvocations.ToDictionary(tuple => tuple.Args.Key, tuple => (tuple.Args, tuple.Time));
+
+            foreach ((string expectedKey, DummyModel expectedValue, DateTime insertionTime) in keysWithInsertionTimes)
+            {
+                CollectionAssert.Contains(invocationsDictionary.Keys, expectedKey);
+
+                (CacheItemRemovedEventArgs args, DateTime removeTime) = invocationsDictionary[expectedKey];
+                
+                Assert.AreEqual(CacheItemRemovedReason.Expired, args.Reason);
+                Assert.AreEqual(expectedValue, args.Value);
+
+                double timeAlive = (removeTime - insertionTime).TotalMilliseconds;
+                double differenceBetweenTimeAliveAndTimeToLive = Math.Abs(timeAlive - _timeToLive.TotalMilliseconds);
+                Assert.LessOrEqual(differenceBetweenTimeAliveAndTimeToLive,
+                    TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD);
+            }
         }
     }
 }
