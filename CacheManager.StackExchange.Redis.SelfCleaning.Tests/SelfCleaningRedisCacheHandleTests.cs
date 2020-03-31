@@ -8,6 +8,7 @@ using CacheManager.Core.Logging;
 using CacheManager.StackExchange.Redis.SelfCleaning.Timers;
 using Moq;
 using NUnit.Framework;
+using NUnit.Framework.Constraints;
 using StackExchange.Redis;
 
 namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
@@ -16,38 +17,34 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
     public class SelfCleaningRedisCacheHandleTests
     {
         private Mock<IServer> _serverMock;
-
-        private Mock<IConnectionMultiplexer> _connectionMock;
+        private Mock<IDatabase> _redisDatabaseMock;
+        private int _defulatDatabaseId;
         private Mock<ITimer> _timerMock;
-        private TimeSpan _timeToLive;
+        private TimeSpan _defaultTimeToLive;
 
-        private TestableSelfCleaningRedisCacheHandle<DummyModel> _cacheHandle;
+        private TestableSelfCleaningRedisCacheHandle _cacheHandle;
 
         [SetUp]
         public void Setup()
         {
+            // Because the 'SelfCleaningRedisCacheHandle' depends on base class, we have 2 kinds of setups here:
+            // 1. Setupping behaviors of base class, in order that our code will even run.
+            // 2. Setupping behaviors of our code, in order to control different flows and test them (like our usual setups).
+            // First kind setups will be in 'TestUtilities.CreateSelfCleaningRedisCacheHandleForTests', and the second kind will
+            // be here. That in order to conceal irrelevant setups from the developer that test the class here :)
+
             _serverMock = new Mock<IServer>();
 
-            _connectionMock = new Mock<IConnectionMultiplexer>();
-            _timerMock = new Mock<ITimer>();
-            _timeToLive = TimeSpan.FromSeconds(1);
+            _redisDatabaseMock = new Mock<IDatabase>();
+            _defulatDatabaseId = 12;
+            _redisDatabaseMock.SetupGet(database => database.Database)
+                .Returns(_defulatDatabaseId);
 
-            SetupConnectionMock();
+            _timerMock = new Mock<ITimer>();
+            _defaultTimeToLive = TimeSpan.FromSeconds(1);
 
             _cacheHandle = TestUtilities.CreateSelfCleaningRedisCacheHandleForTests(
-                _connectionMock.Object, _timerMock.Object, _timeToLive);
-        }
-
-
-        private void SetupConnectionMock()
-        {
-            _serverMock.SetupGet(server => server.IsConnected).Returns(true);
-            _serverMock.SetupGet(server => server.Features).Returns(new RedisFeatures(Version.Parse("3.0.504")));
-
-            _connectionMock.SetupGet(connection => connection.Configuration).Returns("connectionString");
-            _connectionMock.Setup(connection => connection.GetEndPoints(It.IsAny<bool>())).Returns(new EndPoint[1]);
-            _connectionMock.Setup(connection => connection.GetServer(It.IsAny<EndPoint>(), It.IsAny<object>()))
-                .Returns(_serverMock.Object);
+                _serverMock, _redisDatabaseMock, _timerMock, _defaultTimeToLive);
         }
 
         [Test]
@@ -83,28 +80,54 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
         public void RunCleanup_HappyFlowRedisDataBaseIsntFoundInServers_EventWasntRaised()
         {
             // Arrange
-            _serverMock.Setup(server => server.Keys(It.IsAny<int>(),
-                    It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(),
-                    It.IsAny<int>(), It.IsAny<CommandFlags>()))
-                .Returns(new List<RedisKey>());
+            SetupKeysMethodOfServer(It.IsAny<int>(), new List<RedisKey>());
 
             // Act
             _cacheHandle.Start();
             _timerMock.Raise(timer => timer.Elapsed += null);
 
             // Assert
-            _serverMock.VerifyNoOtherCalls();
+            VerifyKeysMethodOfServer(_defulatDatabaseId);
+
+            _redisDatabaseMock.VerifyGet(database => database.Database, Times.Once);
+            _redisDatabaseMock.Verify(database => database.KeyIdleTime(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+
+            // No calls to Get method
+            Assert.IsEmpty(_cacheHandle.KeysArgumentsOfGetMethodCalls);
+
+            // No calls to Remove method
+            Assert.IsEmpty(_cacheHandle.KeysArgumentsOfRemoveMethodCalls);
         }
 
+        #region "cleaner" setup and verifiction for 'Keys' method of 'Server'
+        // 'Keys' of 'Server' has a lot of optional arguments, and the setup (and the verify) look bad, so I prettify it
 
+        private void SetupKeysMethodOfServer(int databaseId, IEnumerable<RedisKey> result)
+        {
+            _serverMock.Setup(server => server.Keys(databaseId,
+                    It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(),
+                    It.IsAny<int>(), It.IsAny<CommandFlags>()))
+                .Returns(result);
+        }
+
+        private void VerifyKeysMethodOfServer(int databaseId)
+        {
+            _serverMock.Verify(server => server.Keys(_defulatDatabaseId,
+                It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(),
+                It.IsAny<int>(), It.IsAny<CommandFlags>()), Times.Once);
+        }
+
+        #endregion
     }
 
     #region Testable SelfCleaningRedisCacheHandle internal class
 
     /// <summary>
-    /// Exposes the protected <see cref="SelfCleaningRedisCacheHandle.Dispose"/>
+    /// Exposes the protected overrides methods of <see cref="SelfCleaningRedisCacheHandle"/> (Dispose),
+    /// and the <see cref="RedisCacheHandle"/> methods which being called from
+    /// <see cref="SelfCleaningRedisCacheHandle"/> (Get, Remove)
     /// </summary>
-    internal class TestableSelfCleaningRedisCacheHandle<TCacheValue> : SelfCleaningRedisCacheHandle<TCacheValue>
+    internal class TestableSelfCleaningRedisCacheHandle : SelfCleaningRedisCacheHandle<DummyModel>
     {
         public TestableSelfCleaningRedisCacheHandle(ICacheManagerConfiguration managerConfiguration,
             CacheHandleConfiguration configuration, ILoggerFactory loggerFactory, ICacheSerializer serializer)
@@ -113,6 +136,24 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
         public void RunDispose(bool disposeManaged)
         {
             base.Dispose(disposeManaged);
+        }
+
+        public List<string> KeysArgumentsOfGetMethodCalls = new List<string>();
+
+        public override DummyModel Get(string key)
+        {
+            KeysArgumentsOfGetMethodCalls.Add(key);
+
+            return base.Get(key);
+        }
+
+        public List<string> KeysArgumentsOfRemoveMethodCalls = new List<string>();
+
+        public override bool Remove(string key)
+        {
+            KeysArgumentsOfRemoveMethodCalls.Add(key);
+
+            return base.Remove(key);
         }
     }
 
