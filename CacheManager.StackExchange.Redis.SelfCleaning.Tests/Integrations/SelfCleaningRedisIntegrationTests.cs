@@ -14,7 +14,7 @@ using Moq;
 using NUnit.Framework;
 using StackExchange.Redis;
 
-namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
+namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 {
     [TestFixture]
     public class SelfCleaningRedisIntegrationTests

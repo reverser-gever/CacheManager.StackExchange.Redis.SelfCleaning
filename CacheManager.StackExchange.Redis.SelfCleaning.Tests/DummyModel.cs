@@ -15,7 +15,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
 
         public override int GetHashCode()
         {
-            return (Property != null ? Property.GetHashCode() : 0);
+            return Property != null ? Property.GetHashCode() : 0;
         }
     }
 }
