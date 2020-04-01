@@ -3,9 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using CacheManager.Core;
 using CacheManager.Core.Internal;
+using CacheManager.Redis;
 using CacheManager.StackExchange.Redis.SelfCleaning.Core;
 using CacheManager.StackExchange.Redis.SelfCleaning.Timers;
 using Moq;
@@ -17,7 +19,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
     [TestFixture]
     public class SelfCleaningRedisIntegrationTests
     {
-        private const double TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD = 100;
+        private const double TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD = 150;
 
         private Mock<IServer> _serverMock;
         private Mock<IDatabase> _databaseMock;
@@ -30,7 +32,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
 
         private ICollection<(CacheItemRemovedEventArgs Args, DateTime Time)> _onRemoveByHandleInvocations;
 
-        [OneTimeSetUp]
+        [SetUp]
         public void Setup()
         {
             _serverMock = new Mock<IServer>();
@@ -135,12 +137,14 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
         {
             _fauxDatabase.Clear();
             _onRemoveByHandleInvocations.Clear();
-        }
-
-        [OneTimeTearDown]
-        public void OneTimeTearDown()
-        {
             _cache.Dispose();
+            
+            // Clear the configurations dictionary to make sure a given configuration won't be used twice  
+            var redisConfigurations = typeof(RedisConfigurations)
+                .GetProperty("Configurations", BindingFlags.Static | BindingFlags.NonPublic)
+                ?.GetValue(null) as IDictionary<string, RedisConfiguration>;
+            
+            redisConfigurations?.Clear();
         }
 
         [TestCase(1, false)]
