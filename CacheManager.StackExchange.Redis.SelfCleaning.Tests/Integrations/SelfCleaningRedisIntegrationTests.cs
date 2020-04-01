@@ -25,12 +25,12 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         private Mock<IDatabase> _databaseMock;
         private Mock<IConnectionMultiplexer> _connectionMock;
 
-        private IDictionary<RedisKey, (RedisValue[] Values, DateTime InsertionTime)> _fauxDatabase;
+        private IDictionary<RedisKey, CacheItemWithInsertionTime> _fauxDatabase;
 
         private TimeSpan _timeToLive;
         private ICacheManager<DummyModel> _cache;
 
-        private ICollection<(CacheItemRemovedEventArgs Args, DateTime Time)> _onRemoveByHandleInvocations;
+        private ICollection<OnRemoveByHandleInvocation> _onRemoveByHandleInvocations;
 
         [SetUp]
         public void Setup()
@@ -39,7 +39,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             _databaseMock = new Mock<IDatabase>();
             _connectionMock = new Mock<IConnectionMultiplexer>();
 
-            _fauxDatabase = new ConcurrentDictionary<RedisKey, (RedisValue[], DateTime)>();
+            _fauxDatabase = new ConcurrentDictionary<RedisKey, CacheItemWithInsertionTime>();
 
             SetupServerMock();
             SetupDatabaseMock();
@@ -68,18 +68,16 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
             void Put(byte[] hash, RedisKey[] keys, RedisValue[] values, CommandFlags flags)
             {
-                RedisValue[] newValues = {values[0], values[2], values[3], values[4], values[1], values[5], true};
-                (RedisValue[], DateTime) tuple = (newValues, DateTime.Now);
-
                 RedisKey key = keys[0];
+                var item = new CacheItemWithInsertionTime(values);
 
                 if (_fauxDatabase.ContainsKey(key))
                 {
-                    _fauxDatabase[key] = tuple;
+                    _fauxDatabase[key] = item;
                 }
                 else
                 {
-                    _fauxDatabase.Add(key, tuple);
+                    _fauxDatabase.Add(key, item);
                 }
             }
 
@@ -124,8 +122,14 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
                     out string configurationKey)
                 .WithSelfCleaningRedisCacheHandle(configurationKey));
 
-            _onRemoveByHandleInvocations = new List<(CacheItemRemovedEventArgs, DateTime)>();
-            _cache.OnRemoveByHandle += (sender, args) => _onRemoveByHandleInvocations.Add((args, DateTime.Now));
+            _onRemoveByHandleInvocations = new List<OnRemoveByHandleInvocation>();
+            
+            _cache.OnRemoveByHandle += (sender, args) => _onRemoveByHandleInvocations.Add(
+                new OnRemoveByHandleInvocation
+                {
+                    Args = args,
+                    RemovalTime = DateTime.Now
+                });
 
             _cache.CacheHandles.OfType<IStartable>().Single().Start();
         }
@@ -138,12 +142,12 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             _fauxDatabase.Clear();
             _onRemoveByHandleInvocations.Clear();
             _cache.Dispose();
-            
+
             // Clear the configurations dictionary to make sure a given configuration won't be used twice  
             var redisConfigurations = typeof(RedisConfigurations)
                 .GetProperty("Configurations", BindingFlags.Static | BindingFlags.NonPublic)
                 ?.GetValue(null) as IDictionary<string, RedisConfiguration>;
-            
+
             redisConfigurations?.Clear();
         }
 
@@ -176,8 +180,8 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             Task.Delay((int) (_timeToLive.TotalMilliseconds + TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD)).Wait();
 
             // Assert
-            IDictionary<string, (CacheItemRemovedEventArgs Args, DateTime Time)> invocationsDictionary =
-                _onRemoveByHandleInvocations.ToDictionary(tuple => tuple.Args.Key, tuple => (tuple.Args, tuple.Time));
+            IDictionary<string, OnRemoveByHandleInvocation> invocationsDictionary =
+                _onRemoveByHandleInvocations.ToDictionary(invocation => invocation.Args.Key, invocation => invocation);
 
             foreach ((string expectedKey, DummyModel expectedValue, DateTime insertionTime) in keysWithInsertionTimes)
             {
@@ -234,15 +238,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             CollectionAssert.IsEmpty(_onRemoveByHandleInvocations);
         }
 
-        private static void OnRemoveByHandleAssertion((CacheItemRemovedEventArgs, DateTime) invocation,
+        private static void OnRemoveByHandleAssertion(OnRemoveByHandleInvocation invocation,
             DummyModel expectedValue, DateTime insertionTime, TimeSpan expectedTimeAlive)
         {
-            (CacheItemRemovedEventArgs args, DateTime removeTime) = invocation;
+            Assert.AreEqual(CacheItemRemovedReason.Expired, invocation.Args.Reason);
+            Assert.AreEqual(expectedValue, invocation.Args.Value);
 
-            Assert.AreEqual(CacheItemRemovedReason.Expired, args.Reason);
-            Assert.AreEqual(expectedValue, args.Value);
-
-            TimeSpan timeAlive = removeTime - insertionTime;
+            TimeSpan timeAlive = invocation.RemovalTime - insertionTime;
             double differenceBetweenTimeAliveAndExpected =
                 Math.Abs(timeAlive.TotalMilliseconds - expectedTimeAlive.TotalMilliseconds);
             Assert.LessOrEqual(differenceBetweenTimeAliveAndExpected, TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD);
