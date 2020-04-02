@@ -19,6 +19,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
     public class SelfCleaningRedisIntegrationTests
     {
         private const double TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD = 200;
+        private const double CLEANUP_INTERVAL = 100;
 
         private Mock<IServer> _serverMock;
         private Mock<IDatabase> _databaseMock;
@@ -26,6 +27,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
         private IDictionary<RedisKey, CacheItemWithInsertionTime> _fauxDatabase;
 
+        private ITimer _cleanupTimer;
         private TimeSpan _timeToLive;
         private ICacheManager<DummyModel> _cache;
 
@@ -114,13 +116,12 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
         private void SetupCache()
         {
-            double cleanupInterval = 100;
-            var cleanupTimer = new DefaultTimer(cleanupInterval);
+            _cleanupTimer = new DefaultTimer(CLEANUP_INTERVAL);
             _timeToLive = TimeSpan.FromSeconds(1);
 
             _cache = CacheFactory.Build<DummyModel>(part => part
                 .WithJsonSerializer()
-                .WithSelfCleaningRedisConfiguration(_connectionMock.Object, cleanupTimer, _timeToLive,
+                .WithSelfCleaningRedisConfiguration(_connectionMock.Object, _cleanupTimer, _timeToLive,
                     out string configurationKey)
                 .WithSelfCleaningRedisCacheHandle(configurationKey));
 
@@ -241,6 +242,37 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
             // Assert
             CollectionAssert.IsEmpty(_onRemoveByHandleInvocations);
+        }
+
+        [Test]
+        public void Put_KeyIdleTimeReturnsNull_DoesNotThrow()
+        {
+            // Arrange
+            var key = "key1";
+            var value = new DummyModel {Property = "property1"};
+
+            _databaseMock
+                .Setup(database => database.KeyIdleTime(key, It.IsAny<CommandFlags>()))
+                .Returns((TimeSpan?) null);
+            
+            // Act
+            _cache[key] = value;
+
+            // Make sure an exception isn't thrown during cleanup
+            Wait(CLEANUP_INTERVAL * 2);
+
+            // Assert
+            Assert.Pass();
+        }
+
+        [Test]
+        public void Dispose_HappyFlow_CleanupTimerIsDisposed()
+        {
+            // Act
+            _cache.Dispose();
+            
+            // Assert
+            Assert.Throws<ObjectDisposedException>(() => _cleanupTimer.Start());
         }
 
         private static void Wait(TimeSpan delay) => Task.Delay(delay).Wait();
