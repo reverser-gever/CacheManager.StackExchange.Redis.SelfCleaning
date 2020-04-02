@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using CacheManager.Core;
 using CacheManager.Core.Internal;
 using CacheManager.Redis;
-using CacheManager.StackExchange.Redis.SelfCleaning.Core;
 using CacheManager.StackExchange.Redis.SelfCleaning.Timers;
 using Moq;
 using NUnit.Framework;
@@ -79,6 +78,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
                     _fauxDatabase.Add(key, item);
                 }
             }
+            
+            // RedisCacheHandle uses ScriptEvaluate to access the cache in the Put and Get methods.
+            // Below, we mock the behavior of Redis with our own faux database, by setting up callbacks and return
+            // values in response to invocations of ScriptEvaluate.
 
             // Put
             _databaseMock
@@ -116,7 +119,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             _timeToLive = TimeSpan.FromSeconds(1);
 
             _cache = CacheFactory.Build<DummyModel>(part => part
-                .WithProtoBufSerializer()
+                .WithJsonSerializer()
                 .WithSelfCleaningRedisConfiguration(_connectionMock.Object, cleanupTimer, _timeToLive,
                     out string configurationKey)
                 .WithSelfCleaningRedisCacheHandle(configurationKey));

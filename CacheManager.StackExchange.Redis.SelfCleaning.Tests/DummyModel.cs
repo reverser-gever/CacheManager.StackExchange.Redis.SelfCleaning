@@ -1,11 +1,7 @@
-﻿using ProtoBuf;
-
-namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
+﻿namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
 {
-    [ProtoContract]
     public class DummyModel
     {
-        [ProtoMember(1)]
         public string Property { get; set; }
 
         public override bool Equals(object obj)
