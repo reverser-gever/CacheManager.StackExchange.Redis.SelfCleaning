@@ -21,6 +21,8 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         private const double TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD = 200;
         private const double CLEANUP_INTERVAL = 100;
 
+        private bool _useScripting;
+        
         private Mock<IServer> _serverMock;
         private Mock<IDatabase> _databaseMock;
         private Mock<IConnectionMultiplexer> _connectionMock;
@@ -36,6 +38,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         [SetUp]
         public void Setup()
         {
+            // If the following variable is set to true, RedisCacheHandle will use scripts to access the cache, with the
+            // ScriptEvaluate method. Otherwise, it will use HashSet and HashGet. Both cases are setup in this class. 
+            _useScripting = true;
+            
             _serverMock = new Mock<IServer>();
             _databaseMock = new Mock<IDatabase>();
             _connectionMock = new Mock<IConnectionMultiplexer>();
@@ -52,8 +58,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
         private void SetupServerMock()
         {
+            Version redisVersion = _useScripting ? Version.Parse("3.0.504") : Version.Parse("2.0.0");
+            
             _serverMock.SetupGet(server => server.IsConnected).Returns(true);
-            _serverMock.SetupGet(server => server.Features).Returns(new RedisFeatures(Version.Parse("3.0.504")));
+            _serverMock.SetupGet(server => server.Features).Returns(new RedisFeatures(redisVersion));
             _serverMock
                 .Setup(server => server.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(),
                     It.IsAny<int>(), It.IsAny<CommandFlags>()))
@@ -65,12 +73,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             _databaseMock.SetupGet(database => database.Database).Returns(0);
             _databaseMock.Setup(database => database.KeyIdleTime(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
                 .Returns<RedisKey, CommandFlags>((key, flags) => DateTime.Now - _fauxDatabase[key].InsertionTime);
-
-            void PutInFauxDatabase(byte[] hash, RedisKey[] keys, RedisValue[] values, CommandFlags flags)
+            
+            void PutInFauxDatabase(RedisKey key, CacheItemWithInsertionTime item)
             {
-                RedisKey key = keys[0];
-                var item = new CacheItemWithInsertionTime(values);
-
                 if (_fauxDatabase.ContainsKey(key))
                 {
                     _fauxDatabase[key] = item;
@@ -81,15 +86,29 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
                 }
             }
             
-            // RedisCacheHandle uses ScriptEvaluate to access the cache in the Put and Get methods.
-            // Below, we mock the behavior of Redis with our own faux database, by setting up callbacks and return
-            // values in response to invocations of ScriptEvaluate.
+            // RedisCacheHandle uses ScriptEvaluate (in versions newer than 2.5.7) and HashSet/HashGet (otherwise) to
+            // access the cache in the Put and Get methods. Below, we mock the behavior of Redis with our own faux
+            // database, by setting up callbacks and return values in response to invocations of said methods.
 
             // Put
             _databaseMock
                 .Setup(database => database.ScriptEvaluate(It.IsAny<byte[]>(), It.IsAny<RedisKey[]>(),
                     It.Is<RedisValue[]>(values => values != null), It.IsAny<CommandFlags>()))
-                .Callback<byte[], RedisKey[], RedisValue[], CommandFlags>(PutInFauxDatabase);
+                .Callback<byte[], RedisKey[], RedisValue[], CommandFlags>((hash, keys, values, flags) =>
+                    PutInFauxDatabase(keys[0], new CacheItemWithInsertionTime(values)));
+
+            _databaseMock
+                .Setup(database => database.HashSet(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(),
+                    It.IsAny<RedisValue>(), It.IsAny<When>(), It.IsAny<CommandFlags>()))
+                .Callback<RedisKey, RedisValue, RedisValue, When, CommandFlags>((key, hash, value, when, flags) =>
+                    PutInFauxDatabase(key, new CacheItemWithInsertionTime(value)))
+                .Returns(true);
+
+            _databaseMock
+                .Setup(database =>
+                    database.HashSet(It.IsAny<RedisKey>(), It.IsAny<HashEntry[]>(), It.IsAny<CommandFlags>()))
+                .Callback<RedisKey, HashEntry[], CommandFlags>((key, hashEntries, flags) =>
+                    PutInFauxDatabase(key, new CacheItemWithInsertionTime(_fauxDatabase[key].Values, hashEntries)));
 
             // Get
             _databaseMock
@@ -97,6 +116,11 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
                     It.Is<RedisValue[]>(values => values == null), It.IsAny<CommandFlags>()))
                 .Returns<byte[], RedisKey[], RedisValue[], CommandFlags>((hash, keys, values, flags) =>
                     RedisResult.Create(_fauxDatabase[keys[0]].Values));
+
+            _databaseMock
+                .Setup(database =>
+                    database.HashGet(It.IsAny<RedisKey>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+                .Returns<RedisKey, RedisValue[], CommandFlags>((key, values, flags) => _fauxDatabase[key].Values);
 
             // Remove
             _databaseMock

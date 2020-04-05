@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using StackExchange.Redis;
 
 namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
@@ -10,7 +11,12 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
 
         public DateTime InsertionTime { get; }
 
-        public CacheItemWithInsertionTime(IReadOnlyList<RedisValue> values)
+        private CacheItemWithInsertionTime()
+        {
+            InsertionTime = DateTime.Now;
+        }
+
+        public CacheItemWithInsertionTime(IReadOnlyList<RedisValue> values) : this()
         {
             Values = new[]
             {
@@ -22,8 +28,17 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests
                 values[5], // Uses expiration defaults
                 true
             };
-            
-            InsertionTime = DateTime.Now;
+        }
+
+        public CacheItemWithInsertionTime(RedisValue value) : this()
+        {
+            Values = new[] {value};
+        }
+
+        public CacheItemWithInsertionTime(IEnumerable<RedisValue> values, IEnumerable<HashEntry> hashEntries)
+            // Concatenate the previously received values with the values from the entries
+            : this(values.Concat(hashEntries.Select(entry => entry.Value)).ToList())
+        {
         }
     }
 }
