@@ -237,7 +237,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
             _cache.Remove(key);
 
-            // In order to be sure that event was not invoked, we wait even longer in this test.
+            // In order to be sure that event was not invoked, we wait even longer in this test
             Wait(_timeToLive.TotalMilliseconds + TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD * 2);
 
             // Assert
@@ -245,7 +245,25 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         }
 
         [Test]
-        public void Put_KeyIdleTimeReturnsNull_DoesNotThrow()
+        public void RunCleanup_NoKeysInServer_OnRemoveByHandleNotCalled()
+        {
+            // Arrange
+            _serverMock
+                .Setup(server => server.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(),
+                    It.IsAny<int>(), It.IsAny<CommandFlags>()))
+                .Returns(Enumerable.Empty<RedisKey>);
+
+            // Act
+            
+            // In order to be sure that event was not invoked, we wait even longer in this test
+            Wait(CLEANUP_INTERVAL * 2);
+            
+            // Assert
+            CollectionAssert.IsEmpty(_onRemoveByHandleInvocations);
+        }
+
+        [Test]
+        public void Put_KeyIdleTimeReturnsNull_OnRemoveByHandleNotCalled()
         {
             // Arrange
             var key = "key1";
@@ -258,11 +276,11 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             // Act
             _cache[key] = value;
 
-            // Make sure an exception isn't thrown during cleanup
+            // In order to be sure that event was not invoked, we wait even longer in this test
             Wait(CLEANUP_INTERVAL * 2);
 
             // Assert
-            Assert.Pass();
+            CollectionAssert.IsEmpty(_onRemoveByHandleInvocations);
         }
 
         [Test]
