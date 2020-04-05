@@ -20,8 +20,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
     {
         private const double TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD = 200;
         private const double CLEANUP_INTERVAL = 100;
-
-        private bool _useScripting;
         
         private Mock<IServer> _serverMock;
         private Mock<IDatabase> _databaseMock;
@@ -38,10 +36,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         [SetUp]
         public void Setup()
         {
-            // If the following variable is set to true, RedisCacheHandle will use scripts to access the cache, with the
-            // ScriptEvaluate method. Otherwise, it will use HashSet and HashGet. Both cases are setup in this class. 
-            _useScripting = true;
-            
             _serverMock = new Mock<IServer>();
             _databaseMock = new Mock<IDatabase>();
             _connectionMock = new Mock<IConnectionMultiplexer>();
@@ -58,10 +52,8 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
         private void SetupServerMock()
         {
-            Version redisVersion = _useScripting ? Version.Parse("3.0.504") : Version.Parse("2.0.0");
-            
             _serverMock.SetupGet(server => server.IsConnected).Returns(true);
-            _serverMock.SetupGet(server => server.Features).Returns(new RedisFeatures(redisVersion));
+            _serverMock.SetupGet(server => server.Features).Returns(new RedisFeatures(Version.Parse("3.0.504")));
             _serverMock
                 .Setup(server => server.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(),
                     It.IsAny<int>(), It.IsAny<CommandFlags>()))
