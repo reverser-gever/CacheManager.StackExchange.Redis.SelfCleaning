@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Channels;
 using CacheManager.Core;
 using CacheManager.Redis;
 using CacheManager.StackExchange.Redis.SelfCleaning.Core;
@@ -14,9 +15,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 {
     public class ManualScenariosRunner
     {
-        private TimeSpan _cleanupInterval;
-        private TimeSpan _slidingExpiration;
-        private string _connectionString;
+        private TimeSpan _cleanupInterval = TimeSpan.FromSeconds(0.1);
+        private TimeSpan _slidingExpiration = TimeSpan.FromSeconds(1);
+        private string _connectionString = "localhost:6379";
 
         public void Run()
         {
@@ -32,7 +33,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
         private void RunConfiguredScenarios()
         {
             RunAnotherScenario(new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _slidingExpiration).RunScenario);
-            //RunAnotherScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _slidingExpiration).RunScenario);
+            RunAnotherScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _slidingExpiration).RunScenario);
             //RunAnotherScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _slidingExpiration).RunScenario);
         }
 
@@ -75,6 +76,19 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 
         private void GetParametersFromUser()
         {
+            Console.WriteLine($"Default configuration:\n" +
+                              $" Connection String - [{_connectionString}]\n" +
+                              $" Sliding Expiration (Time To Live) - [{_slidingExpiration.Milliseconds}] ms\n" +
+                              $" CleanupInterval - [{_cleanupInterval.Milliseconds}] ms");
+
+            var userChoice = ReadInput("something in order to change it, or just press ENTER if this is cool");
+
+            if (userChoice == string.Empty)
+            {
+                Console.WriteLine();
+                return;
+            }
+
             // Get cache parameters from user
             var userName = ReadInput("your name please");
             Console.WriteLine($"Hahahaha {userName}, I dont really have what to do with your name ;) . OK, lets get serious.");
