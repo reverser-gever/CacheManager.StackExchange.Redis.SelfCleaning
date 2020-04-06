@@ -9,11 +9,23 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
     {
         public static void Main()
         {
+            RunManualScenarios();
+
+            //RunSimpleExample();
+        }
+
+        private static void RunManualScenarios()
+        {
+            new ManualScenariosRunner().Run();
+        }
+
+        private static void RunSimpleExample()
+        {
             // Get cache parameters from user
             string connectionString = ReadInput("Connection String");
             double cleanupIntervalMilliseconds = double.Parse(ReadInput("Cleanup Interval (ms)"));
             double slidingExpirationSeconds = double.Parse(ReadInput("Sliding Expiration (sec.)"));
-            
+
             TimeSpan cleanupInterval = TimeSpan.FromMilliseconds(cleanupIntervalMilliseconds);
             TimeSpan slidingExpiration = TimeSpan.FromSeconds(slidingExpirationSeconds);
 
@@ -27,7 +39,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
             // Subscribe to OnRemoveByHandle, the event notifying about expiration
             cacheManager.OnRemoveByHandle += (sender, args) =>
                 Console.WriteLine($"Key \"{args.Key}\" was removed ({args.Reason}), its value was \"{args.Value}\"");
-            
+
             // Start the startable cache handles 
             foreach (IStartable startable in cacheManager.CacheHandles.OfType<IStartable>())
             {
