@@ -18,11 +18,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
         public SimpleSingleExpiredItemScenario(Func<ICacheManager<int>> createCacheManager, TimeSpan configuredTimeToLive)
             : base(createCacheManager, "Simple Single Expired Item", 1,
                 "Adding one item to redis, wait more than TTL and the item should be removed due to timeout", configuredTimeToLive)
-        { }
+        {
+            _actualRemovedCacheItems = new List<CacheItemRemovedEventArgs>();
+        }
 
         protected override void RunScenarioContent()
         {
-            Init();
+            InitCacheManager();
 
             _cacheItem = new CacheItem<int>("Moishe", 23958);
             _cacheManager.Add(_cacheItem);
@@ -30,15 +32,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
             Utilities.Wait(ConfiguredTimeToLive * 1.5);
         }
 
-        private void Init()
+        private void InitCacheManager()
         {
             _cacheManager = CreateCacheManager();
 
             _cacheManager.OnRemoveByHandle += (sender, args) => _actualRemovedCacheItems.Add(args);
 
             StartStartablesCacheHandles(_cacheManager);
-
-            _actualRemovedCacheItems = new List<CacheItemRemovedEventArgs>();
         }
 
         protected override string GetScenarioResults()

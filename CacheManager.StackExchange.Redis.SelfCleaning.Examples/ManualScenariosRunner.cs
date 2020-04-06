@@ -19,23 +19,24 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
             Console.WriteLine("Hello to you dear monsieur/mademoiselle, welcome to our Reidis-Mania! Lets run some weird scenarios!");
             GetParametersFromUser();
 
-            new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _slidingExpiration).RunScenario();
-
+            RunConfiguredScenarios();
+            
             Console.WriteLine("\n\n\n Done running scenarios, press any key to exit. See you next time!");
             Console.Read();
         }
 
-        private ICacheManager<T> CreateCacheManagerWithCleanupIntervalAndTimeToLive<T>(
-            TimeSpan cleanupInterval, TimeSpan timeToLive)
+        private void RunConfiguredScenarios()
         {
+            //Console.WriteLine("\n\n\n ******************************* \n\n\n");
+            //new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _slidingExpiration).RunScenario();
 
-            // Build the cache with a self-cleaning redis handle (as well as a ProtoBuf serializer)
-            return CacheFactory.Build<T>(part => part
-                .WithProtoBufSerializer()
-                .WithDefaultSelfCleaningRedisConfiguration(_connectionString, cleanupInterval, timeToLive,
-                    out string configurationKey)
-                .WithSelfCleaningRedisCacheHandle(configurationKey));
+            Console.WriteLine("\n\n\n ******************************* \n\n\n");
+            new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _slidingExpiration).RunScenario();
+
+            //Console.WriteLine("\n\n\n ******************************* \n\n\n");
+            //new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _slidingExpiration).RunScenario();
         }
+
 
         private ICacheManager<T> CreateCacheManager<T>()
         {
@@ -64,5 +65,16 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 
             Console.WriteLine();
         }
+        //private ICacheManager<T> CreateCacheManagerWithCleanupIntervalAndTimeToLive<T>(
+        //    TimeSpan cleanupInterval, TimeSpan timeToLive)
+        //{
+
+        //    // Build the cache with a self-cleaning redis handle (as well as a ProtoBuf serializer)
+        //    return CacheFactory.Build<T>(part => part
+        //        .WithProtoBufSerializer()
+        //        .WithDefaultSelfCleaningRedisConfiguration(_connectionString, cleanupInterval, timeToLive,
+        //            out string configurationKey)
+        //        .WithSelfCleaningRedisCacheHandle(configurationKey));
+        //}
     }
 }
