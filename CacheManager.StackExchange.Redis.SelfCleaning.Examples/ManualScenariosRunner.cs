@@ -22,6 +22,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
             new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _slidingExpiration).RunScenario();
 
             Console.WriteLine("\n\n\n Done running scenarios, press any key to exit. See you next time!");
+            Console.Read();
         }
 
         private ICacheManager<T> CreateCacheManagerWithCleanupIntervalAndTimeToLive<T>(
@@ -60,6 +61,8 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 
             _cleanupInterval = TimeSpan.FromMilliseconds(cleanupIntervalMilliseconds);
             _slidingExpiration = TimeSpan.FromSeconds(slidingExpirationSeconds);
+
+            Console.WriteLine();
         }
     }
 }
