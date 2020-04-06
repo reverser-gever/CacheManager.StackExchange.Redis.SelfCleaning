@@ -55,15 +55,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
             Console.WriteLine("\n.\n.\n.\n");
 
             Console.WriteLine($"Total scenario execution last for [{stopwatch.ElapsedMilliseconds}] milliseconds");
+
             Console.WriteLine($"Results: {GetScenarioResults()}");
 
-            if (_exceptions.Any())
+            Console.WriteLine($"Exceptions: {_exceptions.Count} exceptions where thrown");
+            foreach (var exception in _exceptions)
             {
-                Console.WriteLine($"In addition, {_exceptions.Count} exceptions where thrown");
-                foreach (var exception in _exceptions)
-                {
-                    Console.WriteLine($"\n   EXCEPTION: {exception}");
-                }
+                Console.WriteLine($"\n   EXCEPTION: {exception}");
             }
 
             Dispose();

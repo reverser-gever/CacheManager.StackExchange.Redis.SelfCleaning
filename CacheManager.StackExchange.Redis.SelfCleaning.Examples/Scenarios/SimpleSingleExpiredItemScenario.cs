@@ -29,7 +29,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
             _cacheItem = new CacheItem<int>("Moishe", 23958);
             _cacheManager.Add(_cacheItem);
 
-            Utilities.Wait(ConfiguredTimeToLive * 1.5);
+            Utilities.Wait(ConfiguredTimeToLive * 3);
         }
 
         private void InitCacheManager()

@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using CacheManager.Core;
+using CacheManager.Redis;
 using CacheManager.StackExchange.Redis.SelfCleaning.Core;
 using CacheManager.StackExchange.Redis.SelfCleaning.Examples;
 using CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios;
+using StackExchange.Redis;
 using static CacheManager.StackExchange.Redis.SelfCleaning.Examples.Utilities;
 
 namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
@@ -27,26 +31,46 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 
         private void RunConfiguredScenarios()
         {
-            //Console.WriteLine("\n\n\n ******************************* \n\n\n");
-            //new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _slidingExpiration).RunScenario();
-
-            Console.WriteLine("\n\n\n ******************************* \n\n\n");
-            new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _slidingExpiration).RunScenario();
-
-            //Console.WriteLine("\n\n\n ******************************* \n\n\n");
-            //new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _slidingExpiration).RunScenario();
+            RunAnotherScenario(new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _slidingExpiration).RunScenario);
+            //RunAnotherScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _slidingExpiration).RunScenario);
+            //RunAnotherScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _slidingExpiration).RunScenario);
         }
 
+        private void RunAnotherScenario(Action scenario)
+        {
+            Console.WriteLine("\n\n\n ******************************* \n\n\n");
+            scenario();
+        }
 
         private ICacheManager<T> CreateCacheManager<T>()
         {
-
             // Build the cache with a self-cleaning redis handle (as well as a ProtoBuf serializer)
-            return CacheFactory.Build<T>(part => part
+            var cacheManager =  CacheFactory.Build<T>(part => part
                 .WithProtoBufSerializer()
                 .WithDefaultSelfCleaningRedisConfiguration(_connectionString, _cleanupInterval, _slidingExpiration,
                     out string configurationKey)
                 .WithSelfCleaningRedisCacheHandle(configurationKey));
+            
+
+            #region Clear Static RedisConfiguration and stuff using Reflection (ugly...)
+            // Clear the configurations dictionary to make sure a previously given configuration won't be used again  
+            var redisConfigurations = typeof(RedisConfigurations)
+                .GetProperty("Configurations", BindingFlags.Static | BindingFlags.NonPublic)
+                ?.GetValue(null) as IDictionary<string, RedisConfiguration>;
+
+            redisConfigurations?.Clear();
+
+            // Clear the connections dictionary to make sure a previously given connection won't be used again
+            var redisConnections = Assembly.GetAssembly(typeof(RedisCacheHandle<>))
+                .GetType("CacheManager.Redis.RedisConnectionManager")
+                .GetField("_connections", BindingFlags.NonPublic | BindingFlags.Static)
+                ?.GetValue(null) as IDictionary<string, IConnectionMultiplexer>;
+
+            redisConnections?.Clear(); 
+            #endregion
+            
+
+            return cacheManager;
         }
 
         private void GetParametersFromUser()

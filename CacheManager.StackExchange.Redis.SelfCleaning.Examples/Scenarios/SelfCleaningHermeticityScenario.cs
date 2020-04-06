@@ -21,8 +21,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
             int numberOfCacheManagerInstances, TimeSpan configuredTimeToLive)
             : base(createCacheManager, "Hermeticity", numberOfCacheManagerInstances,
                 $"{numberOfCacheManagerInstances} instances of CacheManagers. " +
-                $"Send 10000 messages to them randomly, and expect to get 10000 removed cacheItems. " +
-                $"Also, zero exceptions is expected."
+                "Send 10000 messages to them randomly, and expect to get 10000 removed cacheItems."
                 , configuredTimeToLive)
         {
             _expectedRemovedCacheItems = new List<CacheItem<double>>();
@@ -38,7 +37,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
         {
             InitCacheManagers();
             
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 int chosenCacheManagerIndex = _rn.Next(0, _cacheManagers.Length);
                 var cacheManger = _cacheManagers[chosenCacheManagerIndex];
@@ -51,8 +50,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
                 _expectedRemovedCacheItems.Add(cacheItem);
                 _cacheManagersAdditionCounter[chosenCacheManagerIndex]++;
             }
-
-
+            
             Utilities.Wait(ConfiguredTimeToLive * 3);
         }
 
