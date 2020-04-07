@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
-using CacheManager.Core;
-using CacheManager.StackExchange.Redis.SelfCleaning.Core;
 
 namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 {

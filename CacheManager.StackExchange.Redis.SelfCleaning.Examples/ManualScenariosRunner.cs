@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Channels;
 using CacheManager.Core;
 using CacheManager.Redis;
-using CacheManager.StackExchange.Redis.SelfCleaning.Core;
-using CacheManager.StackExchange.Redis.SelfCleaning.Examples;
 using CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios;
 using StackExchange.Redis;
 using static CacheManager.StackExchange.Redis.SelfCleaning.Examples.Utilities;

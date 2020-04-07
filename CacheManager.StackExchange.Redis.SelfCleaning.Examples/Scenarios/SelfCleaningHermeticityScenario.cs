@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Text;
 using CacheManager.Core;
 using CacheManager.Core.Internal;
