@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using CacheManager.Core;
 using CacheManager.Redis;
-using CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios;
+using CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenarios;
 using StackExchange.Redis;
-using static CacheManager.StackExchange.Redis.SelfCleaning.Examples.Utilities;
+using static CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Utilities;
 
-namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
+namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios
 {
     public class ManualScenariosRunner
     {

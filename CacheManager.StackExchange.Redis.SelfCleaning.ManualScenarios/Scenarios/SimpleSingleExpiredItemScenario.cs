@@ -6,7 +6,7 @@ using System.Text;
 using CacheManager.Core;
 using CacheManager.Core.Internal;
 
-namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
+namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenarios
 {
     public class SimpleSingleExpiredItemScenario : BaseSingleScenario<int>
     {

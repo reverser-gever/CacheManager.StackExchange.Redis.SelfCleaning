@@ -9,18 +9,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
     {
         public static void Main()
         {
-            RunManualScenarios();
-
-            //RunSimpleExample();
-        }
-
-        private static void RunManualScenarios()
-        {
-            new ManualScenariosRunner().Run();
-        }
-
-        private static void RunSimpleExample()
-        {
             // Get cache parameters from user
             string connectionString = ReadInput("Connection String");
             double cleanupIntervalMilliseconds = double.Parse(ReadInput("Cleanup Interval (ms)"));
@@ -50,7 +38,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 
             cacheManager.Dispose();
         }
-
         private static void InputLoop(ICache<string> cache)
         {
             Console.WriteLine("Example running.");

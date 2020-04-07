@@ -5,7 +5,7 @@ using System.Linq;
 using CacheManager.Core;
 using CacheManager.StackExchange.Redis.SelfCleaning.Core;
 
-namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
+namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenarios
 {
     public abstract class BaseSingleScenario<T>
     {
@@ -58,7 +58,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
 
             Console.WriteLine($"Results: {GetScenarioResults()}");
 
-            Console.WriteLine($"Exceptions: {_exceptions.Count} exceptions where thrown");
+            Console.WriteLine($"Exceptions: {_exceptions.Count} exceptions were thrown");
             foreach (var exception in _exceptions)
             {
                 Console.WriteLine($"\n   EXCEPTION: {exception}");

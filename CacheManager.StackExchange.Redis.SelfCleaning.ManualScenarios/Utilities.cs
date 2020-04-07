@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
+namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios
 {
     public static class Utilities
     {
