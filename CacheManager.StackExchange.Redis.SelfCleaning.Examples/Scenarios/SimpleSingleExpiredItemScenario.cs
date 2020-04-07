@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,13 +14,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
         private ICacheManager<int> _cacheManager;
 
         private CacheItem<int> _cacheItem;
-        private List<CacheItemRemovedEventArgs> _actualRemovedCacheItems;
+        private readonly ICollection<CacheItemRemovedEventArgs> _actualRemovedCacheItems;
 
         public SimpleSingleExpiredItemScenario(Func<ICacheManager<int>> createCacheManager, TimeSpan configuredTimeToLive)
             : base(createCacheManager, "Simple Single Expired Item", 1,
                 "Adding one item to redis, wait more than TTL and the item should be removed due to timeout", configuredTimeToLive)
         {
-            _actualRemovedCacheItems = new List<CacheItemRemovedEventArgs>();
+            _actualRemovedCacheItems = new Collection<CacheItemRemovedEventArgs>();
         }
 
         protected override void RunScenarioContent()
@@ -52,11 +53,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
 
             //Actual
             builder.AppendLine($"Actual: {_actualRemovedCacheItems.Count} cacheItems were removed:");
-            foreach (var removedCacheItem in _actualRemovedCacheItems)
-            {
-                builder.AppendLine(
-                    $"   Key [{removedCacheItem.Key}], value [{removedCacheItem.Value}], due to [{removedCacheItem.Reason}]");
-            }
+
+            IEnumerable<string> removedCacheItemsLinesToPrint = _actualRemovedCacheItems
+                .Select(args => $"   Key [{args.Key}], value [{args.Value}], due to [{args.Reason}]");
+            builder.AppendJoin(Environment.NewLine, removedCacheItemsLinesToPrint);
 
             return builder.ToString();
         }

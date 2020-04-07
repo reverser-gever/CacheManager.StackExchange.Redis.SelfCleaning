@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Text;
 using CacheManager.Core;
@@ -83,14 +84,11 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples.Scenarios
             //Actual
             builder.AppendLine($"Actual: {_actualRemovedCacheItems.Count} cacheItems were removed");
 
-            foreach (var removedCacheItem in _actualRemovedCacheItems)
-            {
-                if (removedCacheItem.Reason != CacheItemRemovedReason.Expired)
-                {
-                    builder.AppendLine(
-                        $"   Weird RemovalReason - key [{removedCacheItem.Key}], value [{removedCacheItem.Value}], due to [{removedCacheItem.Reason}]");
-                }
-            }
+            IEnumerable<string> weirdRemovalReasonLinesToPrint = _actualRemovedCacheItems
+                .Where(removedCacheItem => removedCacheItem.Reason != CacheItemRemovedReason.Expired)
+                .Select(args => $"   Weird RemovalReason - key [{args.Key}], value [{args.Value}], due to [{args.Reason}]");
+
+            builder.AppendJoin(Environment.NewLine, weirdRemovalReasonLinesToPrint);
 
             return builder.ToString();
         }

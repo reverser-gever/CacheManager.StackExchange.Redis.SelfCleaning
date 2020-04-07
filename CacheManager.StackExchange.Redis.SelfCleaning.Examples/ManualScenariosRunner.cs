@@ -15,43 +15,73 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
 {
     public class ManualScenariosRunner
     {
-        private TimeSpan _cleanupInterval = TimeSpan.FromSeconds(0.1);
-        private TimeSpan _slidingExpiration = TimeSpan.FromSeconds(1);
-        private string _connectionString = "localhost:6379";
+        private const string DEFAULT_CLEAN_INTERVAL_IN_MS = "1000";
+        private TimeSpan _cleanupInterval;
+        private const string DEFAULT_TIME_TO_LIVE_IN_MS = "3000";
+        private TimeSpan _timeToLive;
+        private const string DEFAULT_CONNECTION_STRING = "localhost:6379";
+        private string _connectionString;
 
         public void Run()
         {
             Console.WriteLine("Hello to you dear monsieur/mademoiselle, welcome to our Reidis-Mania! Lets run some weird scenarios!");
+            Console.WriteLine();
             GetParametersFromUser();
 
             RunConfiguredScenarios();
-            
+
             Console.WriteLine("\n\n\n Done running scenarios, press any key to exit. See you next time!");
             Console.Read();
         }
 
-        private void RunConfiguredScenarios()
+        private void GetParametersFromUser()
         {
-            RunAnotherScenario(new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _slidingExpiration).RunScenario);
-            RunAnotherScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _slidingExpiration).RunScenario);
-            //RunAnotherScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _slidingExpiration).RunScenario);
+            _connectionString =
+                ReadInputOrDefault("Connection String", DEFAULT_CONNECTION_STRING);
+
+            string cleanupIntervalMilliseconds = ReadInputOrDefault(
+                "Cleanup Interval", DEFAULT_CLEAN_INTERVAL_IN_MS, "ms");
+            
+            _cleanupInterval = TimeSpan.FromMilliseconds(double.Parse(cleanupIntervalMilliseconds));
+
+            string slidingExpirationSeconds = ReadInputOrDefault(
+                "Sliding Expiration", DEFAULT_TIME_TO_LIVE_IN_MS, "ms");
+
+            _timeToLive = TimeSpan.FromMilliseconds(double.Parse(slidingExpirationSeconds));
+
+            Console.WriteLine();
         }
 
-        private void RunAnotherScenario(Action scenario)
+        private string ReadInputOrDefault(string fieldName, string defaultValue, string measurementsUnits = "")
+        {
+            Console.WriteLine($"Default configuration for field {fieldName} - [{defaultValue}{measurementsUnits}]");
+            var userValue = ReadInput("different value (same measurements units) in order to change it, or just press ENTER if this is cool");
+
+            Console.WriteLine();
+
+            return userValue == string.Empty ? defaultValue : userValue;
+        }
+
+        private void RunConfiguredScenarios()
         {
             Console.WriteLine("\n\n\n ******************************* \n\n\n");
-            scenario();
+            new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _timeToLive).RunScenario();
+
+            Console.WriteLine("\n\n\n ******************************* \n\n\n");
+            new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _timeToLive).RunScenario();
+
+            //RunSingleScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _timeToLive).RunScenario);
         }
 
         private ICacheManager<T> CreateCacheManager<T>()
         {
             // Build the cache with a self-cleaning redis handle (as well as a ProtoBuf serializer)
-            var cacheManager =  CacheFactory.Build<T>(part => part
-                .WithProtoBufSerializer()
-                .WithDefaultSelfCleaningRedisConfiguration(_connectionString, _cleanupInterval, _slidingExpiration,
-                    out string configurationKey)
-                .WithSelfCleaningRedisCacheHandle(configurationKey));
-            
+            var cacheManager = CacheFactory.Build<T>(part => part
+               .WithProtoBufSerializer()
+               .WithDefaultSelfCleaningRedisConfiguration(_connectionString, _cleanupInterval, _timeToLive,
+                   out string configurationKey)
+               .WithSelfCleaningRedisCacheHandle(configurationKey));
+
 
             #region Clear Static RedisConfiguration and stuff using Reflection (ugly...)
             // Clear the configurations dictionary to make sure a previously given configuration won't be used again  
@@ -67,42 +97,13 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Examples
                 .GetField("_connections", BindingFlags.NonPublic | BindingFlags.Static)
                 ?.GetValue(null) as IDictionary<string, IConnectionMultiplexer>;
 
-            redisConnections?.Clear(); 
+            redisConnections?.Clear();
             #endregion
-            
+
 
             return cacheManager;
         }
 
-        private void GetParametersFromUser()
-        {
-            Console.WriteLine($"Default configuration:\n" +
-                              $" Connection String - [{_connectionString}]\n" +
-                              $" Sliding Expiration (Time To Live) - [{_slidingExpiration.Milliseconds}] ms\n" +
-                              $" CleanupInterval - [{_cleanupInterval.Milliseconds}] ms");
-
-            var userChoice = ReadInput("something in order to change it, or just press ENTER if this is cool");
-
-            if (userChoice == string.Empty)
-            {
-                Console.WriteLine();
-                return;
-            }
-
-            // Get cache parameters from user
-            var userName = ReadInput("your name please");
-            Console.WriteLine($"Hahahaha {userName}, I dont really have what to do with your name ;) . OK, lets get serious.");
-
-
-            _connectionString = ReadInput("Connection String");
-            double cleanupIntervalMilliseconds = double.Parse(ReadInput("Cleanup Interval (ms)"));
-            double slidingExpirationSeconds = double.Parse(ReadInput("Sliding Expiration (sec.)"));
-
-            _cleanupInterval = TimeSpan.FromMilliseconds(cleanupIntervalMilliseconds);
-            _slidingExpiration = TimeSpan.FromSeconds(slidingExpirationSeconds);
-
-            Console.WriteLine();
-        }
         //private ICacheManager<T> CreateCacheManagerWithCleanupIntervalAndTimeToLive<T>(
         //    TimeSpan cleanupInterval, TimeSpan timeToLive)
         //{
