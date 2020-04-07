@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using CacheManager.Core;
@@ -9,36 +10,39 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
 {
     public class SelfCleaningHermeticityScenario : BaseSingleScenario<double>
     {
-        private ICacheManager<double>[] _cacheManagers;
-        private long[] _cacheManagersAdditionCounter;
+        private readonly ICacheManager<double>[] _cacheManagers;
+        private readonly long[] _cacheManagersAdditionCounter;
 
-        private List<CacheItem<double>> _expectedRemovedCacheItems;
-        private List<CacheItemRemovedEventArgs> _actualRemovedCacheItems;
-        private Random _rn;
+        private readonly ICollection<CacheItem<double>> _expectedRemovedCacheItems;
+        private readonly ICollection<CacheItemRemovedEventArgs> _actualRemovedCacheItems;
+        private readonly Random _random;
+
+        protected override string ScenarioName => "Hermeticity";
+        protected override string ScenarioDescription => 
+            $"{NumberOfCacheManagerInstances} instances of CacheManagers. " +
+            $"Send 10000 messages to them randomly, and expect to get 10000 removed cacheItems.";
 
         public SelfCleaningHermeticityScenario(Func<ICacheManager<double>> createCacheManager,
             int numberOfCacheManagerInstances, TimeSpan configuredTimeToLive)
-            : base(createCacheManager, "Hermeticity", numberOfCacheManagerInstances,
-                $"{numberOfCacheManagerInstances} instances of CacheManagers. " +
-                "Send 10000 messages to them randomly, and expect to get 10000 removed cacheItems."
+            : base(createCacheManager, numberOfCacheManagerInstances
                 , configuredTimeToLive)
         {
-            _expectedRemovedCacheItems = new List<CacheItem<double>>();
-            _actualRemovedCacheItems = new List<CacheItemRemovedEventArgs>();
+            _expectedRemovedCacheItems = new Collection<CacheItem<double>>();
+            _actualRemovedCacheItems = new Collection<CacheItemRemovedEventArgs>();
 
             _cacheManagers = new ICacheManager<double>[NumberOfCacheManagerInstances];
             _cacheManagersAdditionCounter = new long[NumberOfCacheManagerInstances];
 
-            _rn = new Random(DateTime.Now.Millisecond);
+            _random = new Random(DateTime.Now.Millisecond);
         }
 
         protected override void RunScenarioContent()
         {
             InitCacheManagers();
-            
+
             for (int i = 0; i < 10000; i++)
             {
-                int chosenCacheManagerIndex = _rn.Next(0, _cacheManagers.Length);
+                int chosenCacheManagerIndex = _random.Next(0, _cacheManagers.Length);
                 var cacheManger = _cacheManagers[chosenCacheManagerIndex];
 
                 var cacheItem = new CacheItem<double>(i.ToString(), i);
@@ -49,7 +53,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
                 _expectedRemovedCacheItems.Add(cacheItem);
                 _cacheManagersAdditionCounter[chosenCacheManagerIndex]++;
             }
-            
+
             Utilities.Wait(ConfiguredTimeToLive * 3);
         }
 
@@ -62,7 +66,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
                 cacheManager.OnRemoveByHandle += (sender, args) => _actualRemovedCacheItems.Add(args);
                 _cacheManagers[i] = cacheManager;
 
-                StartStartablesCacheHandles(cacheManager);
+                StartCacheHandles(cacheManager);
             }
         }
 

@@ -9,34 +9,30 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
 {
     public abstract class BaseSingleScenario<T>
     {
-        private string _scenarioName;
-        private string _scenarioDescription;
+        protected abstract string ScenarioName { get; }
+        protected abstract string ScenarioDescription { get; }
+
         protected int NumberOfCacheManagerInstances;
 
         protected readonly TimeSpan ConfiguredTimeToLive;
         protected Func<ICacheManager<T>> CreateCacheManager;
 
-        private List<Exception> _exceptions;
+        private Exception _exception;
         //protected Func<ICacheManager<T>, TimeSpan, TimeSpan> CreateCacheManagerCustomConfig;
 
         protected BaseSingleScenario(Func<ICacheManager<T>> createCacheManager, //Func<ICacheManager<T>, TimeSpan, TimeSpan> createCacheManagerCustomConfig, 
-            string scenarioName,
-            int numberOfCacheManagerInstances, string scenarioDescription, TimeSpan configuredTimeToLive)
+            int numberOfCacheManagerInstances, TimeSpan configuredTimeToLive)
         {
             CreateCacheManager = createCacheManager;
             //CreateCacheManagerCustomConfig = createCacheManagerCustomConfig;
-            _scenarioDescription = scenarioDescription;
             ConfiguredTimeToLive = configuredTimeToLive;
             NumberOfCacheManagerInstances = numberOfCacheManagerInstances;
-            _scenarioName = scenarioName;
-
-            _exceptions = new List<Exception>();
         }
 
         public void RunScenario()
         {
-            Console.WriteLine($"Running {_scenarioName} scenario, with use {NumberOfCacheManagerInstances} instances of self cleaning redis cache manager");
-            Console.WriteLine($"Description: {_scenarioDescription}");
+            Console.WriteLine($"Running {ScenarioName} scenario, with use {NumberOfCacheManagerInstances} instances of self cleaning redis cache manager");
+            Console.WriteLine($"Description: {ScenarioDescription}");
 
             var stopwatch = Stopwatch.StartNew();
             stopwatch.Start();
@@ -47,7 +43,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
             }
             catch (Exception e)
             {
-                _exceptions.Add(e);
+                _exception = e;
             }
 
             stopwatch.Stop();
@@ -58,16 +54,20 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
 
             Console.WriteLine($"Results: {GetScenarioResults()}");
 
-            Console.WriteLine($"Exceptions: {_exceptions.Count} exceptions were thrown");
-            foreach (var exception in _exceptions)
+            if (_exception != null)
             {
-                Console.WriteLine($"\n   EXCEPTION: {exception}");
+                Console.WriteLine($"Exceptione was thrown during scenario");
+                Console.WriteLine($"\n   EXCEPTION: {_exception}");
             }
-
+            else
+            {
+                Console.WriteLine($"No exception was thrown during the scenario");
+            }
+            
             Dispose();
         }
 
-        protected void StartStartablesCacheHandles(ICacheManager<T> cacheManager)
+        protected void StartCacheHandles(ICacheManager<T> cacheManager)
         {
             // Start the startable cache handles 
             foreach (IStartable startable in cacheManager.CacheHandles.OfType<IStartable>())
@@ -77,7 +77,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
         }
 
         protected abstract void RunScenarioContent();
+
         protected abstract string GetScenarioResults();
+
         protected abstract void Dispose();
     }
 }
