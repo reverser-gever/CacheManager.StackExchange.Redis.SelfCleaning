@@ -53,20 +53,22 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios
             Console.WriteLine($"Default configuration for field {fieldName} - [{defaultValue}{measurementsUnits}]");
             var userValue = ReadInput("different value (same measurements units) in order to change it, or just press ENTER if this is cool");
 
-            Console.WriteLine();
-
             return userValue == string.Empty ? defaultValue : userValue;
         }
 
         private void RunConfiguredScenarios()
         {
-            Console.WriteLine("\n\n\n ******************************* \n\n\n");
-            new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _timeToLive).RunScenario();
+            RunSingleScenario(new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _timeToLive).RunScenario);
 
-            Console.WriteLine("\n\n\n ******************************* \n\n\n");
-            new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _timeToLive).RunScenario();
+            RunSingleScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _timeToLive).RunScenario);
 
             //RunSingleScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _timeToLive).RunScenario);
+        }
+
+        private void RunSingleScenario(Action runScenario)
+        {
+            Console.WriteLine("\n\n\n ******************************* \n\n\n");
+            runScenario();
         }
 
         private ICacheManager<T> CreateCacheManager<T>()

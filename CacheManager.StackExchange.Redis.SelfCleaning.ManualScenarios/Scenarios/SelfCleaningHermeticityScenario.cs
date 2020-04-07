@@ -10,6 +10,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
 {
     public class SelfCleaningHermeticityScenario : BaseSingleScenario<double>
     {
+        private const int NUMBER_OF_MESSAGES = 10000;
         private readonly ICacheManager<double>[] _cacheManagers;
         private readonly long[] _cacheManagersAdditionCounter;
 
@@ -20,7 +21,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
         protected override string ScenarioName => "Hermeticity";
         protected override string ScenarioDescription => 
             $"{NumberOfCacheManagerInstances} instances of CacheManagers. " +
-            $"Send 10000 messages to them randomly, and expect to get 10000 removed cacheItems.";
+            $"Send {NUMBER_OF_MESSAGES} messages to them randomly, and expect to get {NUMBER_OF_MESSAGES} removed cacheItems.";
 
         public SelfCleaningHermeticityScenario(Func<ICacheManager<double>> createCacheManager,
             int numberOfCacheManagerInstances, TimeSpan configuredTimeToLive)
@@ -40,9 +41,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
         {
             InitCacheManagers();
 
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < NUMBER_OF_MESSAGES; i++)
             {
-                int chosenCacheManagerIndex = _random.Next(0, _cacheManagers.Length);
+                int chosenCacheManagerIndex = _random.Next(_cacheManagers.Length);
                 var cacheManger = _cacheManagers[chosenCacheManagerIndex];
 
                 var cacheItem = new CacheItem<double>(i.ToString(), i);
@@ -81,7 +82,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
             }
 
             // Expected
-            builder.AppendLine("Expected: 10000 cacheItem were removed");
+            builder.AppendLine($"Expected: {NUMBER_OF_MESSAGES} cacheItem were removed");
 
             //Actual
             builder.AppendLine($"Actual: {_actualRemovedCacheItems.Count} cacheItems were removed");
