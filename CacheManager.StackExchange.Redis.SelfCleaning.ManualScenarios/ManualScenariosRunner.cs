@@ -58,9 +58,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios
 
         private void RunConfiguredScenarios()
         {
-            RunSingleScenario(new SimpleSingleExpiredItemScenario(CreateCacheManager<int>, _timeToLive).RunScenario);
+            RunSingleScenario(new SimpleSingleExpiredItemScenario(_timeToLive, CreateCacheManager<int>).RunScenario);
 
-            RunSingleScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 1, _timeToLive).RunScenario);
+            RunSingleScenario(new SelfCleaningHermeticityScenario(1, _timeToLive, CreateCacheManager<double>).RunScenario);
 
             //RunSingleScenario(new SelfCleaningHermeticityScenario(CreateCacheManager<double>, 5, _timeToLive).RunScenario);
         }
@@ -101,17 +101,5 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios
 
             return cacheManager;
         }
-
-        //private ICacheManager<T> CreateCacheManagerWithCleanupIntervalAndTimeToLive<T>(
-        //    TimeSpan cleanupInterval, TimeSpan timeToLive)
-        //{
-
-        //    // Build the cache with a self-cleaning redis handle (as well as a ProtoBuf serializer)
-        //    return CacheFactory.Build<T>(part => part
-        //        .WithProtoBufSerializer()
-        //        .WithDefaultSelfCleaningRedisConfiguration(_connectionString, cleanupInterval, timeToLive,
-        //            out string configurationKey)
-        //        .WithSelfCleaningRedisCacheHandle(configurationKey));
-        //}
     }
 }

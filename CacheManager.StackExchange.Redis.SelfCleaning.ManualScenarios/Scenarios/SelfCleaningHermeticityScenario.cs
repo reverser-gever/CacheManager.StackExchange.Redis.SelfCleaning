@@ -14,7 +14,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
         private readonly ICacheManager<double>[] _cacheManagers;
         private readonly long[] _cacheManagersAdditionCounter;
 
-        private readonly ICollection<CacheItem<double>> _expectedRemovedCacheItems;
         private readonly ICollection<CacheItemRemovedEventArgs> _actualRemovedCacheItems;
         private readonly Random _random;
 
@@ -23,18 +22,17 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
             $"{NumberOfCacheManagerInstances} instances of CacheManagers. " +
             $"Send {NUMBER_OF_MESSAGES} messages to them randomly, and expect to get {NUMBER_OF_MESSAGES} removed cacheItems.";
 
-        public SelfCleaningHermeticityScenario(Func<ICacheManager<double>> createCacheManager,
-            int numberOfCacheManagerInstances, TimeSpan configuredTimeToLive)
-            : base(createCacheManager, numberOfCacheManagerInstances
-                , configuredTimeToLive)
+        public SelfCleaningHermeticityScenario(int numberOfCacheManagerInstances,
+            TimeSpan configuredTimeToLive, Func<ICacheManager<double>> createCacheManager)
+            : base(numberOfCacheManagerInstances, configuredTimeToLive
+                , createCacheManager)
         {
-            _expectedRemovedCacheItems = new Collection<CacheItem<double>>();
             _actualRemovedCacheItems = new Collection<CacheItemRemovedEventArgs>();
 
             _cacheManagers = new ICacheManager<double>[NumberOfCacheManagerInstances];
             _cacheManagersAdditionCounter = new long[NumberOfCacheManagerInstances];
 
-            _random = new Random(DateTime.Now.Millisecond);
+            _random = new Random();
         }
 
         protected override void RunScenarioContent()
@@ -51,7 +49,6 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
                 cacheManger.Add(cacheItem);
 
                 // For detailed result:
-                _expectedRemovedCacheItems.Add(cacheItem);
                 _cacheManagersAdditionCounter[chosenCacheManagerIndex]++;
             }
 

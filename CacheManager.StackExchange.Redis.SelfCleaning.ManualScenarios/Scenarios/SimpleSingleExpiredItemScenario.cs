@@ -20,8 +20,9 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
         protected override string ScenarioDescription =>
             "Adding one item to redis, wait more than TTL and the item should be removed due to timeout";
 
-        public SimpleSingleExpiredItemScenario(Func<ICacheManager<int>> createCacheManager, TimeSpan configuredTimeToLive)
-            : base(createCacheManager, 1, configuredTimeToLive)
+        public SimpleSingleExpiredItemScenario(
+            TimeSpan configuredTimeToLive, Func<ICacheManager<int>> createCacheManager)
+            : base(1, configuredTimeToLive, createCacheManager)
         {
             _actualRemovedCacheItems = new Collection<CacheItemRemovedEventArgs>();
         }

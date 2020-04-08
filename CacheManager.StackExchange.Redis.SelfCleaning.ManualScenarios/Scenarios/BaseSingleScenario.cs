@@ -12,21 +12,17 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
         protected abstract string ScenarioName { get; }
         protected abstract string ScenarioDescription { get; }
 
-        protected int NumberOfCacheManagerInstances;
+        protected readonly int NumberOfCacheManagerInstances;
 
         protected readonly TimeSpan ConfiguredTimeToLive;
-        protected Func<ICacheManager<T>> CreateCacheManager;
+        protected readonly Func<ICacheManager<T>> CreateCacheManager;
 
-        private Exception _exception;
-        //protected Func<ICacheManager<T>, TimeSpan, TimeSpan> CreateCacheManagerCustomConfig;
-
-        protected BaseSingleScenario(Func<ICacheManager<T>> createCacheManager, //Func<ICacheManager<T>, TimeSpan, TimeSpan> createCacheManagerCustomConfig, 
-            int numberOfCacheManagerInstances, TimeSpan configuredTimeToLive)
+        protected BaseSingleScenario(int numberOfCacheManagerInstances, 
+            TimeSpan configuredTimeToLive, Func<ICacheManager<T>> createCacheManager)
         {
-            CreateCacheManager = createCacheManager;
-            //CreateCacheManagerCustomConfig = createCacheManagerCustomConfig;
-            ConfiguredTimeToLive = configuredTimeToLive;
             NumberOfCacheManagerInstances = numberOfCacheManagerInstances;
+            ConfiguredTimeToLive = configuredTimeToLive;
+            CreateCacheManager = createCacheManager;
         }
 
         public void RunScenario()
@@ -37,13 +33,14 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
             var stopwatch = Stopwatch.StartNew();
             stopwatch.Start();
 
+            Exception exception = null;
             try
             {
                 RunScenarioContent();
             }
             catch (Exception e)
             {
-                _exception = e;
+                exception = e;
             }
 
             stopwatch.Stop();
@@ -54,10 +51,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.ManualScenarios.Scenario
 
             Console.WriteLine($"Results: {GetScenarioResults()}");
 
-            if (_exception != null)
+            if (exception != null)
             {
                 Console.WriteLine($"Exceptione was thrown during scenario");
-                Console.WriteLine($"\n   EXCEPTION: {_exception}");
+                Console.WriteLine($"   EXCEPTION: {exception}");
             }
             else
             {
