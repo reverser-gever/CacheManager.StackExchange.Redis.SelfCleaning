@@ -20,7 +20,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
     {
         private const double TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD = 200;
         private const double CLEANUP_INTERVAL = 100;
-        
+
         private Mock<IServer> _serverMock;
         protected Mock<IDatabase> DatabaseMock;
         private Mock<IConnectionMultiplexer> _connectionMock;
@@ -32,7 +32,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         private ICacheManager<DummyModel> _cache;
 
         private ICollection<OnRemoveByHandleInvocation> _onRemoveByHandleInvocations;
-        
+
         protected abstract Version RedisVersion { get; }
 
         [SetUp]
@@ -50,7 +50,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             SetupConnectionMock();
             SetupCache();
         }
-        
+
         #region Setup Methods
 
         private void SetupServerMock()
@@ -72,7 +72,8 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             // Remove
             DatabaseMock
                 .Setup(database => database.KeyDelete(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
-                .Callback<RedisKey, CommandFlags>((key, flags) => FauxDatabase.Remove(key));
+                .Callback<RedisKey, CommandFlags>((key, flags) => FauxDatabase.Remove(key))
+                .Returns(true);
         }
 
         private void SetupConnectionMock()
@@ -97,7 +98,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
                 .WithSelfCleaningRedisCacheHandle(configurationKey));
 
             _onRemoveByHandleInvocations = new List<OnRemoveByHandleInvocation>();
-            
+
             _cache.OnRemoveByHandle += (sender, args) => _onRemoveByHandleInvocations.Add(
                 new OnRemoveByHandleInvocation
                 {
@@ -163,10 +164,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
 
             // Assert
             Assert.AreEqual(expectedCachedItems.Count, _onRemoveByHandleInvocations.Count);
-            
+
             IDictionary<string, OnRemoveByHandleInvocation> invocationsDictionary =
                 _onRemoveByHandleInvocations.ToDictionary(invocation => invocation.Args.Key, invocation => invocation);
-            
+
             foreach ((string expectedKey, DummyModel expectedValue, DateTime insertionTime) in expectedCachedItems)
             {
                 CollectionAssert.Contains(invocationsDictionary.Keys, expectedKey);
@@ -180,8 +181,8 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         {
             // Arrange
             var key = "key1";
-            var value = new DummyModel {Property = "property1"};
-            var updatedValue = new DummyModel {Property = "property2"};
+            var value = new DummyModel { Property = "property1" };
+            var updatedValue = new DummyModel { Property = "property2" };
 
             TimeSpan delayBeforeUpdate = _timeToLive / 2;
 
@@ -205,7 +206,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         {
             // Arrange
             var key = "key1";
-            var value = new DummyModel {Property = "property1"};
+            var value = new DummyModel { Property = "property1" };
 
             TimeSpan delayBeforeRemove = _timeToLive / 2;
 
@@ -233,10 +234,10 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
                 .Returns(Enumerable.Empty<RedisKey>);
 
             // Act
-            
+
             // In order to be sure that event was not invoked, we wait even longer in this test
             Wait(CLEANUP_INTERVAL * 2);
-            
+
             // Assert
             CollectionAssert.IsEmpty(_onRemoveByHandleInvocations);
         }
@@ -246,12 +247,12 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         {
             // Arrange
             var key = "key1";
-            var value = new DummyModel {Property = "property1"};
+            var value = new DummyModel { Property = "property1" };
 
             DatabaseMock
                 .Setup(database => database.KeyIdleTime(key, It.IsAny<CommandFlags>()))
-                .Returns((TimeSpan?) null);
-            
+                .Returns((TimeSpan?)null);
+
             // Act
             _cache[key] = value;
 
@@ -263,15 +264,59 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
         }
 
         [Test]
+        public void PutAndRemoveByAnotherInstance_AddThreeKeysAndTheMiddltOneFailedToBeRemoved_OnRemoveByHandleCalledTwoTimes()
+        {
+            // Arrange
+            IEnumerable<(string, DummyModel)> cacheItems = GenerateDifferentCacheItems(3).ToList();
+
+            var middleCacheItemKey = cacheItems.ElementAt(1).Item1;
+
+            // Configure Remove to return false for the middle cachedItem
+            DatabaseMock
+                .Setup(database => database.KeyDelete(
+                    It.Is<RedisKey>(key => key.ToString() == middleCacheItemKey), It.IsAny<CommandFlags>()))
+                .Returns(false);
+
+            // Act
+            var expectedCachedItems = new List<(string ExpectedKey, DummyModel ExpectedValue, DateTime InsertionTime)>();
+
+            foreach ((string key, DummyModel value) in cacheItems)
+            {
+                _cache[key] = value;
+                DateTime insertionTime = DateTime.Now;
+
+                if (key != middleCacheItemKey)
+                {
+                    expectedCachedItems.Add((key, value, insertionTime));
+                }
+            }
+
+            Wait(_timeToLive.TotalMilliseconds + TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD);
+
+            // Assert
+            Assert.AreEqual(expectedCachedItems.Count, _onRemoveByHandleInvocations.Count);
+
+            IDictionary<string, OnRemoveByHandleInvocation> invocationsDictionary =
+                _onRemoveByHandleInvocations.ToDictionary(invocation => invocation.Args.Key, invocation => invocation);
+
+            foreach ((string expectedKey, DummyModel expectedValue, DateTime insertionTime) in expectedCachedItems)
+            {
+                CollectionAssert.Contains(invocationsDictionary.Keys, expectedKey);
+                OnRemoveByHandleAssertion(invocationsDictionary[expectedKey], expectedValue, insertionTime,
+                    _timeToLive);
+            }
+        }
+
+        [Test]
         public void Dispose_HappyFlow_CleanupTimerIsDisposed()
         {
             // Act
             _cache.Dispose();
-            
+
             // Assert
             Assert.Throws<ObjectDisposedException>(() => _cleanupTimer.Start());
         }
-        
+
         protected void PutInFauxDatabase(RedisKey key, CacheItemWithInsertionTime item)
         {
             if (FauxDatabase.ContainsKey(key))
@@ -283,16 +328,16 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
                 FauxDatabase.Add(key, item);
             }
         }
-        
+
         protected abstract void SetupDatabaseMockByVersion();
 
         private static void Wait(TimeSpan delay) => Task.Delay(delay).Wait();
-        
+
         private static void Wait(double delay) => Task.Delay((int)delay).Wait();
 
         private static IEnumerable<(string, DummyModel)> GenerateDifferentCacheItems(int count) =>
-            Enumerable.Repeat("key", count).Select((key, i) => (key + i, new DummyModel {Property = "property" + i}));
-        
+            Enumerable.Repeat("key", count).Select((key, i) => (key + i, new DummyModel { Property = "property" + i }));
+
         private static void OnRemoveByHandleAssertion(OnRemoveByHandleInvocation invocation,
             DummyModel expectedValue, DateTime insertionTime, TimeSpan expectedTimeAlive)
         {
@@ -302,7 +347,7 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning.Tests.Integrations
             TimeSpan timeAlive = invocation.RemovalTime - insertionTime;
             double differenceBetweenTimeAliveAndExpected =
                 Math.Abs(timeAlive.TotalMilliseconds - expectedTimeAlive.TotalMilliseconds);
-            
+
             Assert.LessOrEqual(differenceBetweenTimeAliveAndExpected, TIME_TO_LIVE_MILLISECONDS_DIFFERENCE_THRESHOLD);
         }
     }

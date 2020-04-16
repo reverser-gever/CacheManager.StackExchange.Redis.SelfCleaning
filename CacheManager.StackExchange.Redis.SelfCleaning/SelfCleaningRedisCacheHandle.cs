@@ -65,7 +65,12 @@ namespace CacheManager.StackExchange.Redis.SelfCleaning
             foreach (RedisKey key in keysToRemove)
             {
                 TCacheValue value = Get(key);
-                Remove(key);
+                
+                if (!Remove(key))
+                {
+                    // This helps us support multiple instances of the self-cleaning mechanism
+                    continue;
+                }
 
                 TriggerCacheSpecificRemove(key, null, CacheItemRemovedReason.Expired, value);
             }
